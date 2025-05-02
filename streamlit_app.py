@@ -32,6 +32,14 @@ stickman2 = {
 def get_punch_offset(frame, phase, max_extension=15):
     """
     Computes a smooth punch extension using a sine wave.
+    
+    Parameters:
+      frame       - Current global frame
+      phase       - Stickman's phase offset for punch timing
+      max_extension - Maximum extra extension for the punch (in pixels)
+      
+    Returns:
+      A value between 0 and max_extension for arm extension.
     """
     progress = ((frame + phase) % punch_cycle) / punch_cycle
     return max_extension * math.sin(progress * math.pi)
@@ -87,4 +95,47 @@ def draw_stickman(ax, x, y, scale, facing, punch_offset):
 def update_positions():
     """
     Updates the horizontal positions of the stickmen and reverses direction 
-    if they get
+    if they get too close to each other or reach the canvas boundaries.
+    """
+    stickman1['x'] += stickman1['dx']
+    stickman2['x'] += stickman2['dx']
+
+    # If the stickmen get very close, reverse their directions.
+    if stickman2['x'] - stickman1['x'] < 100:
+        stickman1['dx'] *= -1
+        stickman2['dx'] *= -1
+
+    # Bounce off the left/right edges.
+    if stickman1['x'] < 50 or stickman1['x'] > WIDTH - 50:
+        stickman1['dx'] *= -1
+    if stickman2['x'] < 50 or stickman2['x'] > WIDTH - 50:
+        stickman2['dx'] *= -1
+
+# Create a placeholder to update the image.
+placeholder = st.empty()
+
+# Animation loop.
+while True:
+    frame_count += 1
+    update_positions()
+    punch1 = get_punch_offset(frame_count, stickman1['phase'])
+    punch2 = get_punch_offset(frame_count, stickman2['phase'])
+    
+    # Set up a Matplotlib figure.
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.set_xlim(0, WIDTH)
+    ax.set_ylim(0, HEIGHT)
+    
+    # Invert y-axis so that (0, 0) is at the top-left, like typical screen coordinates.
+    ax.invert_yaxis()  
+    ax.axis('off')
+    
+    # Draw both stickmen.
+    draw_stickman(ax, stickman1['x'], stickman1['y'], stickman1['scale'], stickman1['facing'], punch1)
+    draw_stickman(ax, stickman2['x'], stickman2['y'], stickman2['scale'], stickman2['facing'], punch2)
+    
+    # Update the image in Streamlit.
+    placeholder.pyplot(fig)
+    
+    # Pause briefly before the next frame.
+    time.sleep(0.03)
